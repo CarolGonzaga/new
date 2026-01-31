@@ -15,6 +15,7 @@ public class TransactionEventsListener {
 
     @KafkaListener(
             topics = "${kivo.kafka.topic.transactions-created}",
+            groupId = "kivo-transaction-service-wallet",
             containerFactory = "kafkaListenerContainerFactory"
     )
     public void onCreated(TransactionCreatedEvent ev) {

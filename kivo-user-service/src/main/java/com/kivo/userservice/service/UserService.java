@@ -36,11 +36,44 @@ public class UserService {
         return userRepository.findAll().stream().map(this::toResponse).toList();
     }
 
+    public UserResponse me(String email) {
+        return toResponse(findByEmailOrThrow(email));
+    }
+
     @Transactional
-    public UserResponse update(Long id, String name, boolean active) {
-        UserEntity entity = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
+    public UserResponse updateMe(String currentEmail, String name, String newEmail) {
+        UserEntity entity = findByEmailOrThrow(currentEmail);
+
+        if (newEmail != null && !newEmail.equalsIgnoreCase(entity.getEmail())) {
+            if (userRepository.existsByEmail(newEmail)) {
+                throw new IllegalArgumentException("Email já cadastrado");
+            }
+            entity.setEmail(newEmail);
+        }
+
         entity.setName(name);
-        entity.setActive(active);
+
+        return toResponse(entity);
+    }
+
+    @Transactional
+    public UserResponse updateAdmin(Long id, String name, String email, Boolean active) {
+        UserEntity entity = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
+
+        if (email != null && !email.equalsIgnoreCase(entity.getEmail())) {
+            if (userRepository.existsByEmail(email)) {
+                throw new IllegalArgumentException("Email já cadastrado");
+            }
+            entity.setEmail(email);
+        }
+
+        entity.setName(name);
+
+        if (active != null) {
+            entity.setActive(active);
+        }
+
         return toResponse(entity);
     }
 
@@ -50,10 +83,17 @@ public class UserService {
     }
 
     public UserEntity findByEmailOrThrow(String email) {
-        return userRepository.findByEmail(email).orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
     }
 
     private UserResponse toResponse(UserEntity e) {
-        return new UserResponse(e.getId(), e.getEmail(), e.getName(), e.getRole(), Boolean.TRUE.equals(e.getActive()));
+        return new UserResponse(
+                e.getId(),
+                e.getEmail(),
+                e.getName(),
+                e.getRole(),
+                Boolean.TRUE.equals(e.getActive())
+        );
     }
 }
