@@ -1,0 +1,102 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: kivo-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-kivo}
+      POSTGRES_USER: ${POSTGRES_USER:-kivo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kivo}
+    ports:
+      - "5432:5432"
+    volumes:
+      - kivo_pgdata:/var/lib/postgresql/data
+
+  kafka:
+    image: apache/kafka:3.7.1
+    container_name: kivo-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    ports:
+      - "9092:9092"
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kivo-kafka-ui
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_CLUSTERS_0_NAME: kivo
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports:
+      - "8080:8080"
+
+  user-service:
+    build:
+      context: .
+      dockerfile: kivo-user-service/Dockerfile
+    container_name: kivo-user-service
+    depends_on:
+      - postgres
+      - kafka
+    env_file:
+      - ./.env
+    environment:
+      SERVER_PORT: 8081
+      APP_NAME: kivo-user-service
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8081:8081"
+
+  transaction-service:
+    build:
+      context: .
+      dockerfile: kivo-transaction-service/Dockerfile
+    container_name: kivo-transaction-service
+    depends_on:
+      - postgres
+      - kafka
+    env_file:
+      - ./.env
+    environment:
+      SERVER_PORT: 8082
+      APP_NAME: kivo-transaction-service
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8082:8082"
+
+  analytics-service:
+    build:
+      context: .
+      dockerfile: kivo-analytics-service/Dockerfile
+    container_name: kivo-analytics-service
+    depends_on:
+      - postgres
+      - kafka
+    env_file:
+      - ./.env
+    environment:
+      SERVER_PORT: 8083
+      APP_NAME: kivo-analytics-service
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8083:8083"
+
+volumes:
+  kivo_pgdata:
