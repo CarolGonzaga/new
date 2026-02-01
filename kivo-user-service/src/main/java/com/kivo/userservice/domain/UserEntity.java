@@ -1,7 +1,6 @@
 package com.kivo.userservice.domain;
 
 import jakarta.persistence.*;
-import java.time.Instant;
 
 @Entity
 @Table(name = "users")
@@ -11,46 +10,66 @@ public class UserEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 120)
+    @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false, length = 120)
+    @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, length = 200)
+    @Column(nullable = false)
     private String passwordHash;
 
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false)
     private String role;
 
     @Column(nullable = false)
-    private Boolean active;
+    private Boolean active = true;
 
-    @Column(nullable = false)
-    private Instant createdAt;
-
-    public UserEntity() {
+    public Long getId() {
+        return id;
     }
 
-    public UserEntity(String email, String name, String passwordHash, String role) {
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
         this.email = email;
-        this.name = name;
-        this.passwordHash = passwordHash;
-        this.role = role;
-        this.active = true;
-        this.createdAt = Instant.now();
     }
 
-    public Long getId() { return id; }
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getPasswordHash() { return passwordHash; }
-    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
-    public Boolean getActive() { return active; }
-    public void setActive(Boolean active) { this.active = active; }
-    public Instant getCreatedAt() { return createdAt; }
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public Boolean getActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
+    }
 }
