@@ -26,6 +26,10 @@ public class AuthController {
     public TokenResponse login(@RequestBody @Valid LoginRequest req) {
         var user = userService.findByEmailOrThrow(req.email());
 
+        if (!Boolean.TRUE.equals(user.getActive())) {
+            throw new IllegalArgumentException("Usuário inativo");
+        }
+
         if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
             throw new IllegalArgumentException("Credenciais inválidas");
         }

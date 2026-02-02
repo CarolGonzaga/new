@@ -38,20 +38,30 @@ public class UsersController {
         return userService.me(currentEmail());
     }
 
-    @PutMapping("/me")
-    public UserResponse updateMe(@RequestBody @Valid UpdateUserRequest req) {
-        return userService.updateMe(currentEmail(), req.name(), req.email());
-    }
+    public record UpdateMeRequest(
+            @NotBlank @Size(min = 2, max = 120) String name,
+            @Email @Size(max = 120) String email
+    ) { }
 
-    @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public UserResponse updateAdmin(@PathVariable("id") Long id, @RequestBody @Valid UpdateUserRequest req) {
-        return userService.updateAdmin(id, req.name(), req.email());
+    @PutMapping("/me")
+    public UserResponse updateMe(@RequestBody @Valid UpdateMeRequest req) {
+        return userService.updateMe(currentEmail(), req.name(), req.email());
     }
 
     @DeleteMapping("/me")
     public void deleteMe() {
         userService.deleteMe(currentEmail());
+    }
+
+    public record UpdateUserRequest(
+            @NotBlank @Size(min = 2, max = 120) String name,
+            @Email @Size(max = 120) String email
+    ) { }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public UserResponse update(@PathVariable("id") Long id, @RequestBody @Valid UpdateUserRequest req) {
+        return userService.updateAdmin(id, req.name(), req.email());
     }
 
     @DeleteMapping("/{id}")
@@ -64,11 +74,5 @@ public class UsersController {
         var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         Object principal = auth == null ? null : auth.getPrincipal();
         return principal == null ? null : principal.toString();
-    }
-
-    public record UpdateUserRequest(
-            @NotBlank @Size(min = 2, max = 120) String name,
-            @NotBlank @Email String email
-    ) {
     }
 }

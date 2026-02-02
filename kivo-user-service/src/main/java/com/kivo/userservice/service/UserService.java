@@ -13,113 +13,118 @@ import java.util.List;
 @Service
 public class UserService {
 
-    private final UserRepository repo;
-    private final PasswordEncoder encoder;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository repo, PasswordEncoder encoder) {
-        this.repo = repo;
-        this.encoder = encoder;
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
     public UserResponse create(CreateUserRequest req) {
-        if (repo.existsByEmail(req.email())) {
+        if (userRepository.existsByEmail(req.email())) {
             throw new IllegalArgumentException("Email já cadastrado");
         }
 
-        UserEntity user = new UserEntity();
-        user.setName(req.name());
-        user.setEmail(req.email());
-        user.setPasswordHash(encoder.encode(req.password()));
-        user.setRole("USER");
-        user.setActive(true);
+        String hash = passwordEncoder.encode(req.password());
 
-        repo.save(user);
-        return toResponse(user);
+        UserEntity entity = new UserEntity();
+        entity.setEmail(req.email());
+        entity.setName(req.name());
+        entity.setPasswordHash(hash);
+        entity.setRole("USER");
+        entity.setActive(true);
+
+        UserEntity saved = userRepository.save(entity);
+        return toResponse(saved);
+
     }
 
     public List<UserResponse> list() {
-        return repo.findAll()
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        return userRepository.findAll().stream().map(this::toResponse).toList();
     }
 
     public UserResponse me(String email) {
-        UserEntity user = repo.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
-        return toResponse(user);
+        return toResponse(findByEmailOrThrow(email));
     }
 
     @Transactional
-    public UserResponse updateMe(String email, String name, String newEmail) {
-        UserEntity user = repo.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
+    public UserResponse updateMe(String currentEmail, String name, String newEmail) {
+        UserEntity entity = findByEmailOrThrow(currentEmail);
 
-        if (!Boolean.TRUE.equals(user.getActive())) {
+        if (!Boolean.TRUE.equals(entity.getActive())) {
             throw new IllegalArgumentException("Usuário inativo");
         }
 
-        if (!user.getEmail().equalsIgnoreCase(newEmail) && repo.existsByEmail(newEmail)) {
-            throw new IllegalArgumentException("Email já cadastrado");
+        if (newEmail != null && !newEmail.equalsIgnoreCase(entity.getEmail())) {
+            if (userRepository.existsByEmail(newEmail)) {
+                throw new IllegalArgumentException("Email já cadastrado");
+            }
+            entity.setEmail(newEmail);
         }
 
-        user.setName(name);
-        user.setEmail(newEmail);
+        entity.setName(name);
 
-        return toResponse(user);
+        return toResponse(entity);
     }
 
     @Transactional
-    public UserResponse updateAdmin(Long id, String name, String newEmail) {
-        UserEntity user = repo.findById(id)
+    public UserResponse updateAdmin(Long id, String name, String email) {
+        UserEntity entity = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
 
-        if (!Boolean.TRUE.equals(user.getActive())) {
+        if (!Boolean.TRUE.equals(entity.getActive())) {
             throw new IllegalArgumentException("Usuário inativo");
         }
 
-        if (!user.getEmail().equalsIgnoreCase(newEmail) && repo.existsByEmail(newEmail)) {
-            throw new IllegalArgumentException("Email já cadastrado");
+        if (email != null && !email.equalsIgnoreCase(entity.getEmail())) {
+            if (userRepository.existsByEmail(email)) {
+                throw new IllegalArgumentException("Email já cadastrado");
+            }
+            entity.setEmail(email);
         }
 
-        user.setName(name);
-        user.setEmail(newEmail);
+        entity.setName(name);
 
-        return toResponse(user);
+        return toResponse(entity);
     }
 
     @Transactional
-    public void deleteMe(String email) {
-        UserEntity user = repo.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
+    public void deleteMe(String currentEmail) {
+        UserEntity entity = findByEmailOrThrow(currentEmail);
 
-        if (!Boolean.TRUE.equals(user.getActive())) {
+        if (!Boolean.TRUE.equals(entity.getActive())) {
             return;
         }
 
-        user.setActive(false);
+        entity.setActive(false);
     }
 
     @Transactional
     public void delete(Long id) {
-        UserEntity user = repo.findById(id)
+        UserEntity entity = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
 
-        if (!Boolean.TRUE.equals(user.getActive())) {
+        if (!Boolean.TRUE.equals(entity.getActive())) {
             return;
         }
 
-        user.setActive(false);
+        entity.setActive(false);
     }
 
-    private UserResponse toResponse(UserEntity user) {
+    public UserEntity findByEmailOrThrow(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
+    }
+
+    private UserResponse toResponse(UserEntity e) {
         return new UserResponse(
-                user.getId(),
-                user.getEmail(),
-                user.getName(),
-                user.getRole(),
-                user.getActive()
+                e.getId(),
+                e.getEmail(),
+                e.getName(),
+                e.getRole(),
+                Boolean.TRUE.equals(e.getActive())
         );
     }
 }
