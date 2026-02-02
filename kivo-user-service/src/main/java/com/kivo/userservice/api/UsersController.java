@@ -35,7 +35,7 @@ public class UsersController {
 
     @GetMapping("/me")
     public UserResponse me() {
-        return userService.me(currentEmail());
+        return userService.me(currentUserId());
     }
 
     public record UpdateMeRequest(
@@ -45,12 +45,12 @@ public class UsersController {
 
     @PutMapping("/me")
     public UserResponse updateMe(@RequestBody @Valid UpdateMeRequest req) {
-        return userService.updateMe(currentEmail(), req.name(), req.email());
+        return userService.updateMe(currentUserId(), req.name(), req.email());
     }
 
     @DeleteMapping("/me")
     public void deleteMe() {
-        userService.deleteMe(currentEmail());
+        userService.deleteMe(currentUserId());
     }
 
     public record UpdateUserRequest(
@@ -70,9 +70,12 @@ public class UsersController {
         userService.delete(id);
     }
 
-    private String currentEmail() {
+    private Long currentUserId() {
         var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        Object principal = auth == null ? null : auth.getPrincipal();
-        return principal == null ? null : principal.toString();
+        Object details = auth == null ? null : auth.getDetails();
+        if (details instanceof Long id) return id;
+        if (details instanceof Integer id) return id.longValue();
+        if (details instanceof String s && s.matches("\\d+")) return Long.valueOf(s);
+        return null;
     }
 }

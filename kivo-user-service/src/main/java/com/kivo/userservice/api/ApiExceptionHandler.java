@@ -1,5 +1,6 @@
 package com.kivo.userservice.api;
 
+import com.kivo.userservice.service.BusinessRuleException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -10,9 +11,9 @@ import java.util.Map;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
-    @ExceptionHandler(IllegalArgumentException.class)
+    @ExceptionHandler(BusinessRuleException.class)
     @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
-    public ProblemDetail illegalArgument(IllegalArgumentException ex) {
+    public ProblemDetail businessRule(BusinessRuleException ex) {
         var pd = ProblemDetail.forStatus(HttpStatus.UNPROCESSABLE_ENTITY);
         pd.setTitle("Business rule violation");
         pd.setDetail(ex.getMessage());
@@ -28,6 +29,15 @@ public class ApiExceptionHandler {
         pd.setProperty("errors", ex.getBindingResult().getFieldErrors().stream()
                 .map(fe -> Map.of("field", fe.getField(), "message", fe.getDefaultMessage()))
                 .toList());
+        return pd;
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+    public ProblemDetail illegalArgument(IllegalArgumentException ex) {
+        var pd = ProblemDetail.forStatus(HttpStatus.UNPROCESSABLE_ENTITY);
+        pd.setTitle("Business rule violation");
+        pd.setDetail(ex.getMessage());
         return pd;
     }
 }

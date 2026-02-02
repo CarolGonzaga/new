@@ -24,107 +24,89 @@ public class UserService {
     @Transactional
     public UserResponse create(CreateUserRequest req) {
         if (userRepository.existsByEmail(req.email())) {
-            throw new IllegalArgumentException("Email já cadastrado");
+            throw new BusinessRuleException("Email já cadastrado");
         }
 
-        String hash = passwordEncoder.encode(req.password());
+        var user = new UserEntity();
+        user.setEmail(req.email());
+        user.setName(req.name());
+        user.setPasswordHash(passwordEncoder.encode(req.password()));
+        user.setRole("USER");
+        user.setActive(true);
 
-        UserEntity entity = new UserEntity();
-        entity.setEmail(req.email());
-        entity.setName(req.name());
-        entity.setPasswordHash(hash);
-        entity.setRole("USER");
-        entity.setActive(true);
-
-        UserEntity saved = userRepository.save(entity);
-        return toResponse(saved);
-
+        userRepository.save(user);
+        return new UserResponse(user);
     }
 
     public List<UserResponse> list() {
-        return userRepository.findAll().stream().map(this::toResponse).toList();
+        return userRepository.findAll()
+                .stream()
+                .map(UserResponse::new)
+                .toList();
     }
 
-    public UserResponse me(String email) {
-        return toResponse(findByEmailOrThrow(email));
+    public UserResponse me(Long userId) {
+        if (userId == null) throw new BusinessRuleException("Token inválido");
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessRuleException("Usuário não encontrado"));
+        return new UserResponse(user);
     }
 
     @Transactional
-    public UserResponse updateMe(String currentEmail, String name, String newEmail) {
-        UserEntity entity = findByEmailOrThrow(currentEmail);
+    public UserResponse updateMe(Long userId, String name, String email) {
+        if (userId == null) throw new BusinessRuleException("Token inválido");
 
-        if (!Boolean.TRUE.equals(entity.getActive())) {
-            throw new IllegalArgumentException("Usuário inativo");
-        }
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessRuleException("Usuário não encontrado"));
 
-        if (newEmail != null && !newEmail.equalsIgnoreCase(entity.getEmail())) {
-            if (userRepository.existsByEmail(newEmail)) {
-                throw new IllegalArgumentException("Email já cadastrado");
+        if (email != null && !email.equalsIgnoreCase(user.getEmail())) {
+            if (userRepository.existsByEmail(email)) {
+                throw new BusinessRuleException("Email já cadastrado");
             }
-            entity.setEmail(newEmail);
+            user.setEmail(email);
         }
 
-        entity.setName(name);
+        user.setName(name);
+        userRepository.save(user);
 
-        return toResponse(entity);
+        return new UserResponse(user);
+    }
+
+    @Transactional
+    public void deleteMe(Long userId) {
+        if (userId == null) throw new BusinessRuleException("Token inválido");
+
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessRuleException("Usuário não encontrado"));
+
+        user.setActive(false);
+        userRepository.save(user);
     }
 
     @Transactional
     public UserResponse updateAdmin(Long id, String name, String email) {
-        UserEntity entity = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
+        var user = userRepository.findById(id)
+                .orElseThrow(() -> new BusinessRuleException("Usuário não encontrado"));
 
-        if (!Boolean.TRUE.equals(entity.getActive())) {
-            throw new IllegalArgumentException("Usuário inativo");
-        }
-
-        if (email != null && !email.equalsIgnoreCase(entity.getEmail())) {
+        if (email != null && !email.equalsIgnoreCase(user.getEmail())) {
             if (userRepository.existsByEmail(email)) {
-                throw new IllegalArgumentException("Email já cadastrado");
+                throw new BusinessRuleException("Email já cadastrado");
             }
-            entity.setEmail(email);
+            user.setEmail(email);
         }
 
-        entity.setName(name);
+        user.setName(name);
+        userRepository.save(user);
 
-        return toResponse(entity);
-    }
-
-    @Transactional
-    public void deleteMe(String currentEmail) {
-        UserEntity entity = findByEmailOrThrow(currentEmail);
-
-        if (!Boolean.TRUE.equals(entity.getActive())) {
-            return;
-        }
-
-        entity.setActive(false);
+        return new UserResponse(user);
     }
 
     @Transactional
     public void delete(Long id) {
-        UserEntity entity = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
+        var user = userRepository.findById(id)
+                .orElseThrow(() -> new BusinessRuleException("Usuário não encontrado"));
 
-        if (!Boolean.TRUE.equals(entity.getActive())) {
-            return;
-        }
-
-        entity.setActive(false);
-    }
-
-    public UserEntity findByEmailOrThrow(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
-    }
-
-    private UserResponse toResponse(UserEntity e) {
-        return new UserResponse(
-                e.getId(),
-                e.getEmail(),
-                e.getName(),
-                e.getRole(),
-                Boolean.TRUE.equals(e.getActive())
-        );
+        user.setActive(false);
+        userRepository.save(user);
     }
 }
