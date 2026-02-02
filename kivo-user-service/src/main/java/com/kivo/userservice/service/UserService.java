@@ -21,6 +21,16 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    private UserResponse toResponse(UserEntity user) {
+        return new UserResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getName(),
+                user.getRole(),
+                Boolean.TRUE.equals(user.getActive())
+        );
+    }
+
     @Transactional
     public UserResponse create(CreateUserRequest req) {
         if (userRepository.existsByEmail(req.email())) {
@@ -35,21 +45,27 @@ public class UserService {
         user.setActive(true);
 
         userRepository.save(user);
-        return new UserResponse(user);
+        return toResponse(user);
     }
 
     public List<UserResponse> list() {
         return userRepository.findAll()
                 .stream()
-                .map(UserResponse::new)
+                .map(this::toResponse)
                 .toList();
     }
 
     public UserResponse me(Long userId) {
         if (userId == null) throw new BusinessRuleException("Token inválido");
+
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessRuleException("Usuário não encontrado"));
-        return new UserResponse(user);
+
+        if (!Boolean.TRUE.equals(user.getActive())) {
+            throw new BusinessRuleException("Usuário inativo");
+        }
+
+        return toResponse(user);
     }
 
     @Transactional
@@ -58,6 +74,10 @@ public class UserService {
 
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessRuleException("Usuário não encontrado"));
+
+        if (!Boolean.TRUE.equals(user.getActive())) {
+            throw new BusinessRuleException("Usuário inativo");
+        }
 
         if (email != null && !email.equalsIgnoreCase(user.getEmail())) {
             if (userRepository.existsByEmail(email)) {
@@ -69,7 +89,7 @@ public class UserService {
         user.setName(name);
         userRepository.save(user);
 
-        return new UserResponse(user);
+        return toResponse(user);
     }
 
     @Transactional
@@ -78,6 +98,10 @@ public class UserService {
 
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessRuleException("Usuário não encontrado"));
+
+        if (!Boolean.TRUE.equals(user.getActive())) {
+            return;
+        }
 
         user.setActive(false);
         userRepository.save(user);
@@ -88,6 +112,10 @@ public class UserService {
         var user = userRepository.findById(id)
                 .orElseThrow(() -> new BusinessRuleException("Usuário não encontrado"));
 
+        if (!Boolean.TRUE.equals(user.getActive())) {
+            throw new BusinessRuleException("Usuário inativo");
+        }
+
         if (email != null && !email.equalsIgnoreCase(user.getEmail())) {
             if (userRepository.existsByEmail(email)) {
                 throw new BusinessRuleException("Email já cadastrado");
@@ -98,13 +126,17 @@ public class UserService {
         user.setName(name);
         userRepository.save(user);
 
-        return new UserResponse(user);
+        return toResponse(user);
     }
 
     @Transactional
     public void delete(Long id) {
         var user = userRepository.findById(id)
                 .orElseThrow(() -> new BusinessRuleException("Usuário não encontrado"));
+
+        if (!Boolean.TRUE.equals(user.getActive())) {
+            return;
+        }
 
         user.setActive(false);
         userRepository.save(user);

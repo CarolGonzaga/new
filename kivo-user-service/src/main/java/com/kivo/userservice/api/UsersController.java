@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -71,11 +72,12 @@ public class UsersController {
     }
 
     private Long currentUserId() {
-        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        Object details = auth == null ? null : auth.getDetails();
-        if (details instanceof Long id) return id;
-        if (details instanceof Integer id) return id.longValue();
-        if (details instanceof String s && s.matches("\\d+")) return Long.valueOf(s);
-        return null;
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return null;
+        Object details = auth.getDetails();
+        if (details == null) return null;
+        if (details instanceof Long v) return v;
+        if (details instanceof Number n) return n.longValue();
+        return Long.valueOf(details.toString());
     }
 }
